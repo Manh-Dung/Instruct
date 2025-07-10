@@ -1,4 +1,4 @@
-# Flutter Permissions Quick Reference
+# Flutter Permissions - Tham khảo nhanh
 
 ## Dependencies
 ```yaml
@@ -8,18 +8,18 @@ dependencies:
   device_info_plus: ^10.1.0
 ```
 
-## Special Cases
+## Trường hợp đặc biệt
 
 ### Location Approximate (Android 12+)
 ```dart
-// permission_handler returns .denied but user granted approximate
+// permission_handler trả về .denied nhưng user đã cấp approximate
 final position = await Geolocator.getCurrentPosition();
 bool isApproximate = position.accuracy > 1000;
 ```
 
 ### Storage (Android 13+)
 ```dart
-// Use granular permissions instead of Permission.storage
+// Dùng granular permissions thay vì Permission.storage
 if (androidInfo.version.sdkInt >= 33) {
   await [Permission.photos, Permission.videos, Permission.audio].request();
 } else {
@@ -29,7 +29,7 @@ if (androidInfo.version.sdkInt >= 33) {
 
 ### Location Always (Android 10+)
 ```dart
-// Must request in sequence
+// Phải request theo thứ tự
 final whenInUse = await Permission.locationWhenInUse.request();
 if (whenInUse.isGranted) {
   final always = await Permission.locationAlways.request();
@@ -38,45 +38,45 @@ if (whenInUse.isGranted) {
 
 ### Notification (Android 13+)
 ```dart
-// Only requestable on Android 13+, returns .denied on older versions
+// Chỉ request được trên Android 13+, trả về .denied trên phiên bản cũ
 if (androidInfo.version.sdkInt >= 33) {
   await Permission.notification.request();
 } else {
-  // Always returns .denied, notifications enabled by default
+  // Luôn trả về .denied, notifications được bật mặc định
 }
 ```
 
-## No Dialog Permissions
-These open Settings directly:
+## Permissions không có Dialog
+Các quyền này mở Settings trực tiếp:
 - `Permission.notification`
 - `Permission.bluetooth`
 - `Permission.manageExternalStorage`
 - `Permission.systemAlertWindow`
 
-## Permission Behaviors
+## Hành vi Permissions
 
-| Permission | Android 12- | Android 13+ | iOS | Notes |
-|------------|-------------|-------------|-----|-------|
+| Permission | Android 12- | Android 13+ | iOS | Ghi chú |
+|------------|-------------|-------------|-----|---------|
 | `location` | Dialog | Dialog | Dialog | Approximate = `.denied` |
-| `locationAlways` | 2-step | 2-step | Dialog | Cannot request directly |
-| `storage` | Dialog | **Deprecated** | N/A | Use granular permissions |
-| `notification` | **Always denied** | Dialog | Dialog | Only requestable on Android 13+ |
-| `manageExternalStorage` | Settings | Settings | N/A | No popup |
+| `locationAlways` | 2 bước | 2 bước | Dialog | Không thể request trực tiếp |
+| `storage` | Dialog | **Deprecated** | N/A | Dùng granular permissions |
+| `notification` | **Luôn denied** | Dialog | Dialog | Chỉ request được trên Android 13+ |
+| `manageExternalStorage` | Settings | Settings | N/A | Không có popup |
 
-## Quick Checks
+## Kiểm tra nhanh
 
 ```dart
-// Check Android version
+// Kiểm tra phiên bản Android
 final androidInfo = await DeviceInfoPlugin().androidInfo;
 bool isAndroid13Plus = androidInfo.version.sdkInt >= 33;
 
-// Notification check
+// Kiểm tra notification
 bool canRequestNotification = isAndroid13Plus;
 if (!canRequestNotification) {
-  // Notifications enabled by default on Android 12-
+  // Notifications được bật mặc định trên Android 12-
 }
 
-// Check if permission needs special handling
+// Kiểm tra permission cần xử lý đặc biệt
 bool isSpecialPermission(Permission p) {
   return [
     Permission.notification,
@@ -86,17 +86,17 @@ bool isSpecialPermission(Permission p) {
   ].contains(p);
 }
 
-// Batch request
+// Request nhiều permissions cùng lúc
 Map<Permission, PermissionStatus> results = await [
   Permission.camera,
   Permission.microphone,
 ].request();
 ```
 
-## Common Patterns
+## Patterns thường dùng
 
 ```dart
-// Smart request
+// Request thông minh
 final status = await permission.status;
 if (status.isPermanentlyDenied) {
   await openAppSettings();
@@ -104,14 +104,14 @@ if (status.isPermanentlyDenied) {
   await permission.request();
 }
 
-// Location with fallback
+// Location với fallback
 try {
   final locationStatus = await Permission.location.request();
   if (locationStatus.isDenied) {
     final position = await Geolocator.getCurrentPosition();
-    // Has approximate permission
+    // Có approximate permission
   }
 } catch (e) {
-  // No location access
+  // Không có quyền truy cập location
 }
 ```
