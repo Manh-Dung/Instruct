@@ -23,6 +23,7 @@ Mỗi hướng dẫn được tổ chức trong một thư mục riêng biệt v
 - [**migrate-gradle-8**](./migrate-gradle-8/) - Hướng dẫn migrate Flutter project lên Gradle 8.x.x
 - [**hive-ce-guide**](./hive-ce-guide/) - Hướng dẫn setup và sử dụng Hive CE cho local storage
 - [**flutter-notifications-guide**](./flutter-notifications-guide/) - Hướng dẫn setup và sử dụng Flutter Local Notifications
+- [**flutter-permissions-guide**](./flutter-permissions-guide/) - Hướng dẫn xử lý permissions với các trường hợp đặc biệt
 
 
 ## 🚀 Cách sử dụng
