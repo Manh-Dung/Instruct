@@ -81,7 +81,7 @@ Chúng tôi hoan nghênh mọi đóng góp! Bạn có thể:
 
 Nếu có thắc mắc hoặc đề xuất, hãy:
 - Tạo [Issue](../../issues) trên GitHub
-- Hoặc liên hệ qua email: [your-email@example.com]
+- Hoặc liên hệ qua email: [manhdung5a@gmail.com]
 
 ## 📄 License
 
