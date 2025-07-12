@@ -36,6 +36,35 @@ include ":app"
 
 ![](https://github.com/minhson3756/admob/blob/main/migrate-gradle-8/img1.jpg?raw=true) 
 
+### Thêm đoạn này dưới allproject trong file `android/build.gradle`
+```
+subprojects {
+    afterEvaluate { project ->
+        if (project.hasProperty('android')) {
+            android {
+                compileOptions {
+                    sourceCompatibility JavaVersion.VERSION_1_8
+                    targetCompatibility JavaVersion.VERSION_1_8
+                }
+            }
+        }
+        if (project.hasProperty('android')) {
+            project.android {
+                if (namespace == null) {
+                    namespace project.group
+                }
+            }
+        }
+        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+            kotlinOptions {
+                jvmTarget = "1.8"
+            }
+        }
+    }
+}
+
+```
+
 ### Cập nhật gradle version tại file `android/gradle/gradle-wrapper.properties`
 
 ![](https://github.com/minhson3756/admob/blob/main/migrate-gradle-8/img2.jpg?raw=true) 
@@ -63,4 +92,4 @@ Xóa 3 dòng
 
 ### Androidmanifest
 Xóa thuộc tính package ở `manifest`
-![](https://github.com/minhson3756/admob/blob/main/migrate-gradle-8/img5.png?raw=true) 
+![](https://github.com/minhson3756/admob/blob/main/migrate-gradle-8/img5.png?raw=true)
