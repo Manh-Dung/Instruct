@@ -27,6 +27,29 @@ if (androidInfo.version.sdkInt >= 33) {
 }
 ```
 
+**iOS Podfile Configuration:**
+```ruby
+# Trong ios/Podfile, thêm vào post_install hook
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'PERMISSION_PHOTOS=1'
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'PERMISSION_PHOTOS_ADD_ONLY=1'
+    end
+  end
+end
+```
+
+**iOS Info.plist Configuration:**
+```xml
+<!-- Trong ios/Runner/Info.plist -->
+<key>NSPhotoLibraryUsageDescription</key>
+<string>Ứng dụng cần quyền truy cập thư viện ảnh để hiển thị và lưu nội dung.</string>
+
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>Ứng dụng cần quyền lưu ảnh/video vào thư viện.</string>
+```
+
 ### Location Always (Android 10+)
 ```dart
 // Phải request theo thứ tự
@@ -44,6 +67,29 @@ if (androidInfo.version.sdkInt >= 33) {
 } else {
   // Luôn trả về .denied, notifications được bật mặc định
 }
+```
+
+**iOS Podfile Configuration:**
+```ruby
+# Trong ios/Podfile, thêm vào post_install hook
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+        '$(inherited)',
+        'PERMISSION_NOTIFICATIONS=1'
+      ]
+    end
+  end
+end
+```
+
+**iOS Info.plist Configuration:**
+```xml
+<!-- Trong ios/Runner/Info.plist -->
+<key>NSUserNotificationUsageDescription</key>
+<string>Ứng dụng cần quyền gửi thông báo để nhắc nhở và cập nhật nội dung.</string>
 ```
 
 ## Permissions không có Dialog
