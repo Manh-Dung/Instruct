@@ -54,3 +54,53 @@ Việc xóa `arm64` khỏi **Excluded Architectures** sẽ cho phép Xcode build
 - Cấu hình này cần được kiểm tra cho cả **project** và **target**
 - Nếu bạn sử dụng CocoaPods, có thể cần kiểm tra cấu hình trong Pods project
 - Đối với Flutter project, kiểm tra cả trong `ios/Runner.xcworkspace`
+
+## Các bước khắc phục bổ sung khác
+
+### Xóa DerivedData (cache build + index - nguyên nhân gây crash nhiều nhất)
+
+Khi Xcode bị lỗi scheme hoặc không tìm thấy simulator, hãy xóa cache:
+
+```bash
+rm -rf ~/Library/Developer/Xcode/DerivedData
+```
+
+Sau đó:
+1. Mở Xcode lại
+2. **Clean Build Folder** (`⇧⌘K`)
+3. Thử click scheme picker hoặc chạy lại
+
+### Xóa toàn bộ scheme cache & reset workspace
+
+1. **Đóng Xcode**
+2. Vào thư mục project Flutter → ios:
+   ```bash
+   rm -rf xcuserdata *.xcworkspace/xcshareddata
+   ```
+3. Mở lại `ios/Runner.xcworkspace` trong Xcode (không mở `.xcodeproj`)
+4. Xcode sẽ tự động regenerate schemes → thử chọn scheme "Runner" hoặc "dev" lại
+
+## Đảm bảo Xcode tìm thấy thiết bị chạy là Simulator
+
+Để chắc chắn rằng Xcode có thể tìm thấy và chạy ứng dụng trên iOS Simulator, hãy thực hiện các bước sau:
+
+### 1. Chọn đúng Scheme và Destination
+
+Tại thanh công cụ Xcode, hãy chọn:
+- **Scheme**: Chọn scheme của ứng dụng (ví dụ: `dev` hoặc `Runner`)
+- **Device**: Chọn simulator cụ thể (ví dụ: `iPhone 17 Pro`)
+
+![Scheme và Device picker](image-2.png)
+*Hình ảnh hiển thị cách chọn scheme "dev" và thiết bị simulator "iPhone 17 Pro"*
+
+### 2. Kiểm tra Destination Settings
+
+Đảm bảo rằng destination settings của bạn bao gồm các thiết bị iOS simulator:
+
+![Destination Settings](image-3.png)
+*Hình ảnh hiển thị cấu hình destination với các tùy chọn iPhone và iPad*
+
+Nếu bạn không thấy simulator trong danh sách, hãy:
+1. Mở **Xcode** → **Settings** → **Locations**
+2. Kiểm tra **Command Line Tools** được set đúng
+3. Thử reset simulator: **Simulator** → **Device** → **Erase All Content and Settings...**
