@@ -20,6 +20,7 @@ Mỗi hướng dẫn được tổ chức trong một thư mục riêng biệt v
 ## 📚 Danh sách Hướng dẫn
 
 ### Mobile Development
+- [**flutter-fastlane-cicd-guide**](./flutter-fastlane-cicd-guide/) - Hướng dẫn tự động hóa CI/CD với Fastlane & GitHub Actions cho dự án Flutter
 - [**migrate-gradle-8**](./migrate-gradle-8/) - Hướng dẫn migrate Flutter project lên Gradle 8.x.x
 - [**hive-ce-guide**](./hive-ce-guide/) - Hướng dẫn setup và sử dụng Hive CE cho local storage
 - [**flutter-notifications-guide**](./flutter-notifications-guide/) - Hướng dẫn setup và sử dụng Flutter Local Notifications
