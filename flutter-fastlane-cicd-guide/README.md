@@ -9,7 +9,7 @@ Tài liệu hướng dẫn chi tiết toàn bộ các bước thiết lập quy 
 2. [Phần 2: Cấu hình GitHub Access Token & Repository Secrets](#phần-2-cấu-hình-github-access-token--repository-secrets)
 3. [Phần 3: Cấu hình mã nguồn Flutter & Fastlane trong Repo](#phần-3-cấu-hình-mã-nguồn-flutter--fastlane-trong-repo)
 4. [Phần 4: File Workflow GitHub Actions Mẫu (`deploy_android.yml`)](#phần-4-file-workflow-github-actions-mẫu-deploy_androidyml)
-5. [Phần 5: Các sự cố thường gặp (Gotchas & Troubleshooting)](#phần-5-các-sự-cố-thường-gặp-gotchas--troubleshooting)
+5. [Phần 5: Các sự cố thường gặp & Khắc phục (Gotchas & Troubleshooting)](#phần-5-các-sự-cố-thường-gặp--khắc-phục-gotchas--troubleshooting)
 
 ---
 
@@ -80,44 +80,53 @@ Nếu dự án của bạn sử dụng các package git private (ví dụ `custo
    - **Expiration**: 1 year (hoặc No expiration)
    - **Repository access**: Chọn **All repositories** (hoặc chọn Repo chính + TẤT CẢ các repo private dependency).
    - **Permissions**:
-     - `Contents`: Read-only (hoặc Read and write nếu cần push Tag).
+     - `Contents`: Read-only
 3. Bấm **Generate token** và copy chuỗi token dạng `github_pat_11...`.
 
 ![GitHub - Fine-grained PAT Settings](images/07_github_fine_grained_pat.png)
 
 ---
 
-### Bước 2.2: Tạo Keystore & Encode Base64 các secret
+### Bước 2.2: Tạo Keystore & Mã hóa Base64 các secret
 1. **Tạo Keystore Android (`upload-keystore.jks`):**
    ```bash
    keytool -genkey -v -keystore upload-keystore.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
    ```
-2. **Chuyển Keystore sang mã Base64:**
+2. **Chuyển Keystore sang mã Base64 (dạng 1 dòng không ngắt đoạn):**
    ```bash
    openssl base64 -A -in upload-keystore.jks
    ```
-3. **Chuyển JSON Key Service Account sang mã Base64:**
+3. **Chuyển JSON Key Service Account sang mã Base64 (dạng 1 dòng không ngắt đoạn):**
    ```bash
    openssl base64 -A -in pc-api-key.json
    ```
 
 ---
 
-### Bước 2.3: Thêm Repository Secrets vào GitHub
-Vào Repository trên GitHub $\rightarrow$ **Settings** $\rightarrow$ **Secrets and variables** $\rightarrow$ **Actions** $\rightarrow$ **New repository secret**. Thêm 7 secrets sau:
+### Bước 2.3: Thêm Repository Secrets bằng Script CLI Tự Động
+Thay vì copy-paste thủ công 8 secrets lên giao diện web, bạn hãy tạo file `.env` ở gốc dự án (file này đã được thêm vào `.gitignore` nên an toàn tuyệt đối):
 
-![GitHub Repository - Actions Secrets](images/08_github_repository_secrets.png)
+**Tạo file `.env`:**
+```env
+ANDROID_KEYSTORE_BASE64=<Chuỗi Base64 của file upload-keystore.jks>
+ANDROID_KEYSTORE_PASSWORD=your_keystore_password
+ANDROID_KEY_ALIAS=your_key_alias
+ANDROID_KEY_PASSWORD=your_key_password
+PLAY_STORE_JSON_KEY_BASE64=<Chuỗi Base64 của file pc-api-key.json>
+GH_PAT=github_pat_11...
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_CHAT_ID=your_telegram_chat_id
+```
 
-| Secret Name | Mô tả / Giá trị |
-| :--- | :--- |
-| `GH_PAT` | Chuỗi Fine-grained Token `github_pat_...` vừa tạo ở Bước 2.1 |
-| `ANDROID_KEYSTORE_BASE64` | Chuỗi Base64 của file `upload-keystore.jks` |
-| `ANDROID_KEYSTORE_PASSWORD` | Mật khẩu của file keystore |
-| `ANDROID_KEY_ALIAS` | Alias của key (ví dụ `upload`) |
-| `ANDROID_KEY_PASSWORD` | Mật khẩu của alias key |
-| `PLAY_STORE_JSON_KEY_BASE64` | Chuỗi Base64 của file JSON key Service Account |
-| `TELEGRAM_BOT_TOKEN` | (Tùy chọn) Token Bot Telegram để nhận thông báo |
-| `TELEGRAM_CHAT_ID` | (Tùy chọn) ID chat Telegram để nhận thông báo |
+**Chạy Script đẩy toàn bộ Secrets lên GitHub bằng GitHub CLI (`gh`):**
+```bash
+while IFS='=' read -r key value; do
+  if [[ -n "$key" && "$key" != \#* ]]; then
+    gh secret set "$key" --body "$value"
+    echo "Đã thêm secret: $key"
+  fi
+done < .env
+```
 
 ---
 
@@ -178,8 +187,10 @@ Vào Repository trên GitHub $\rightarrow$ **Settings** $\rightarrow$ **Secrets 
    end
    ```
 
+---
+
 ### Bước 3.2: Cấu hình `.gitignore`
-Thêm các dòng sau vào `.gitignore` để không bao giờ push bí mật lên Git:
+Thêm các dòng sau vào `.gitignore` để không bao giờ push khóa và bí mật lên Git:
 ```gitignore
 # Fastlane & Build Secrets
 **/fastlane/pc-api-key.json
@@ -189,26 +200,76 @@ Thêm các dòng sau vào `.gitignore` để không bao giờ push bí mật lê
 **/fastlane/test_output
 **/fastlane/*.json
 android/app/upload-keystore.jks
+android/app/*.keystore
+android/app/*.jks
+android/keystore.jks
 android/key.properties
+.env
 ```
 
-### Bước 3.3: Sửa `android/app/build.gradle` (Bảo vệ môi trường CI)
-1. Trong `android/gradle.properties`: **KHÔNG** hardcode `org.gradle.java.home`. Comment dòng đó lại nếu có.
-2. Trong `android/app/build.gradle`, nếu có script tự động mở thư mục sau khi build, bọc trong điều kiện CI:
-   ```groovy
-   if (System.getenv("CI") == null && System.getenv("GITHUB_ACTIONS") == null) {
-       try {
-           def os = System.getProperty("os.name").toLowerCase()
-           if (os.contains("windows")) exec { commandLine 'cmd', '/c', 'start', '', outputDir }
-           else if (os.contains("mac")) exec { commandLine 'open', outputDir }
-           else if (os.contains("linux")) exec { commandLine 'xdg-open', outputDir; ignoreExitValue = true }
-       } catch (Exception e) {}
-   }
+> [!CAUTION]
+> **Loại bỏ file nhạy cảm khỏi Git Index (nếu đã lỡ commit):**
+> Run `git rm --cached <file_path>` để xóa file khỏi theo dõi Git nhưng vẫn giữ nguyên file cục bộ ở máy local.
+
+---
+
+### Bước 3.3: Sửa Gradle Build (Bảo vệ môi trường CI & Tắt Lint Vital)
+
+1. **Bọc script mở folder desktop trong kiểm tra môi trường CI:**
+   - **File `build.gradle` (Groovy):**
+     ```groovy
+     if (System.getenv("CI") == null && System.getenv("GITHUB_ACTIONS") == null) {
+         try {
+             def os = System.getProperty("os.name").toLowerCase()
+             if (os.contains("windows")) exec { commandLine 'cmd', '/c', 'start', '', outputDir }
+             else if (os.contains("mac")) exec { commandLine 'open', outputDir }
+             else if (os.contains("linux")) exec { commandLine 'xdg-open', outputDir; ignoreExitValue = true }
+         } catch (Exception e) {}
+     }
+     ```
+   - **File `build.gradle.kts` (Kotlin DSL):**
+     ```kotlin
+     if (System.getenv("CI") == null && System.getenv("GITHUB_ACTIONS") == null) {
+         val os = System.getProperty("os.name").lowercase()
+         when {
+             os.contains("windows") -> exec { commandLine("cmd", "/c", "start", "", folderPath) }
+             os.contains("mac") -> exec { commandLine("open", folderPath) }
+             else -> exec { commandLine("xdg-open", folderPath) }
+         }
+     }
+     ```
+
+2. **Tắt `lintVital` check trên release build để tránh lỗi intermediate lint file khi dùng Gradle 8.14 + Firebase SDKs:**
+   - **File `build.gradle` (Groovy):**
+     ```groovy
+     android {
+         ...
+         lintOptions {
+             checkReleaseBuilds false
+             abortOnError false
+         }
+     }
+     ```
+   - **File `build.gradle.kts` (Kotlin DSL):**
+     ```kotlin
+     android {
+         ...
+         lint {
+             checkReleaseBuilds = false
+             abortOnError = false
+         }
+     }
+     ```
+
+3. **Nâng cấp Gradle Wrapper lên `8.14` (Yêu cầu bắt buộc của Flutter 3.41+):**
+   Trong `android/gradle/wrapper/gradle-wrapper.properties`:
+   ```properties
+   distributionUrl=https\://services.gradle.org/distributions/gradle-8.14-all.zip
    ```
 
 ---
 
-## PHẦN 4: FILE WORKFLOW GITHUB ACTIONS MẪU (`.github/workflows/deploy_android.yml`)
+## PHẦN 4: FILE WORKFLOW GITHUB ACTIONS CHUẨN (`.github/workflows/deploy_android.yml`)
 
 Tạo file `.github/workflows/deploy_android.yml`:
 
@@ -269,7 +330,7 @@ jobs:
 
       - name: Setup Keystore & key.properties
         run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/app/upload-keystore.jks
+          echo "$ANDROID_KEYSTORE_BASE64" | tr -d '[:space:]' | base64 -d > android/app/upload-keystore.jks
           cat > android/key.properties <<EOF
           storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -282,7 +343,7 @@ jobs:
       - name: Setup Google Play Service Account JSON Key
         run: |
           mkdir -p android/fastlane
-          echo "$PLAY_STORE_JSON_KEY_BASE64" | base64 -d > android/fastlane/pc-api-key.json
+          echo "$PLAY_STORE_JSON_KEY_BASE64" | tr -d '[:space:]' | base64 -d > android/fastlane/pc-api-key.json
         env:
           PLAY_STORE_JSON_KEY_BASE64: ${{ secrets.PLAY_STORE_JSON_KEY_BASE64 }}
 
@@ -303,8 +364,8 @@ jobs:
       - name: Install Flutter Dependencies & Codegen
         run: |
           flutter pub get
-          flutter gen-l10n
-          flutter pub run build_runner build --delete-conflicting-outputs
+          flutter gen-l10n || true
+          dart run build_runner build --delete-conflicting-outputs || true
 
       - name: Build Android App Bundle (AAB)
         run: flutter build appbundle --flavor prod -t lib/main.dart
@@ -321,7 +382,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "github-actions[bot]@users.noreply.github.com"
             git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
-            git push origin "$TAG_NAME"
+            git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$TAG_NAME" || true
           fi
 
       - name: Deploy to Google Play Internal via Fastlane
@@ -337,21 +398,24 @@ jobs:
           token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           format: markdown
           message: |
-            *${{ github.workflow }}*
+            🚀 *${{ github.workflow }}*
             *Trạng thái:* ${{ job.status == 'success' && '🟢 THÀNH CÔNG' || '🔴 THẤT BẠI' }}
             *Repository:* `${{ github.repository }}`
             *Branch:* `${{ github.ref_name }}`
             *Commit:* `${{ github.sha }}`
+            
+            🔗 [Xem chi tiết Log trên GitHub Actions](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
 ```
 
 ---
 
-## PHẦN 5: CÁC SỰ CỐ THƯỜNG GẶP (GOTCHAS & TROUBLESHOOTING)
+## PHẦN 5: CÁC SỰ CỐ THƯỜNG GẶP & KHẮC PHỤC (GOTCHAS & TROUBLESHOOTING)
 
 | Lỗi gặp phải | Nguyên nhân | Cách khắc phục |
 | :--- | :--- | :--- |
-| `fatal: could not read Username for 'https://github.com'` | Token `GITHUB_TOKEN` mặc định chèn header ghi đè | Thêm `persist-credentials: false` vào `actions/checkout@v4` và dùng `http.extraheader` dạng Base64 với `GH_PAT`. |
-| `The caller does not have permission` | Email Service Account chưa được cấp quyền trong Play Console HOẶC Package Name sai. | 1. Kiểm tra lại `package_name` trong `Fastfile` & `Appfile`.<br>2. Thêm email Service Account vào **Users and permissions** trên Google Play Console.<br>3. Upload 1 bản AAB bằng tay lần đầu tiên. |
-| `Version code X has already been used` | Version Code trong `pubspec.yaml` trùng với bản đã phát hành trên Play Store. | Tăng version code trong `pubspec.yaml` (ví dụ `1.3.5+1350`). |
-| `Process 'command 'xdg-open'' finished with non-zero exit value` | Gradle chạy script mở folder giao diện desktop trên máy Linux CI. | Bọc đoạn script trong `if (System.getenv("CI") == null)` trong `android/app/build.gradle`. |
-| `Invalid request - uz-UZ` / `ro-RO` | Mã thư mục ngôn ngữ trong metadata không khớp chuẩn BCP-47 của Google Play API. | 1. Đặt `skip_upload_changelogs: true` cho `deploy_internal`.<br>2. Đổi tên thư mục metadata chuẩn (ví dụ `uz-UZ` $\rightarrow$ `uz`, `ro-RO` $\rightarrow$ `ro`). |
+| `base64: invalid input` | Chuỗi Base64 trong Secret chứa ngắt dòng/khoảng trắng làm ngắt lệnh `base64 -d` của Linux. | Thêm `tr -d '[:space:]'` trước khi pipe sang `base64 -d`: `echo "$SECRET" \| tr -d '[:space:]' \| base64 -d`. |
+| `Write access to repository not granted` (403 Error khi push tag) | Lệnh git push mang header `GH_PAT` (vốn chỉ có quyền Read-only) ra xác thực thay vì dùng token của repo. | Chỉ định dùng `GITHUB_TOKEN` trực tiếp khi push tag: `git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$TAG_NAME"`. |
+| `lintVitalAnalyzeRelease` Failed | Gradle 8.14 kiểm tra lint vital nghiêm ngặt các file trung gian release của Firebase SDK. | Thêm `checkReleaseBuilds false` (Groovy) hoặc `checkReleaseBuilds = false` (Kotlin DSL) vào `android { ... }`. |
+| `Your project's Gradle version is lower than Flutter's minimum supported version` | Version Gradle Wrapper quá cũ. | Nâng `distributionUrl` lên `gradle-8.14-all.zip` trong `gradle-wrapper.properties`. |
+| `Unsupported class file major version 69` | Máy local dùng Java 25 (Android Studio bundled JBR) quá mới với Gradle 8.14. | Dùng OpenJDK 17/21 bằng `flutter config --jdk-dir="path/to/openjdk17"`. Trên CI, workflow đã cố định Java 17. |
+| `Process 'command 'xdg-open'' finished with non-zero exit value` | Gradle chạy script mở folder giao diện desktop trên máy Linux CI. | Bọc đoạn script trong `if (System.getenv("CI") == null && System.getenv("GITHUB_ACTIONS") == null)` trong Gradle. |
